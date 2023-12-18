@@ -1,0 +1,4 @@
+.income-tax-row > div {
+    display: flex;
+    flex-direction: column;
+}
