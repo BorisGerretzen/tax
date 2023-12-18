@@ -1,8 +1,25 @@
-import {useLocalization} from "../localization/localizationContext.tsx";
+import {Locale, useLocalization} from "../localization/localizationContext.tsx";
 import {NlFlag, UkFlag} from "./Svg/Icons.tsx";
+import {JSX} from "preact";
+
+const LocaleFlag = (props: { locale: Locale }) => {
+    const {setLocale} = useLocalization()
+
+    const localeFlagMapping: { [K in Locale]: JSX.Element } = {
+        "nl": <NlFlag/>,
+        "en": <UkFlag/>,
+    }
+
+    const flag = localeFlagMapping[props.locale]
+    return <a
+        style={{cursor: "pointer"}}
+        title={`Switch language to ${props.locale}`}
+        onClick={() => setLocale(props.locale)}
+    >{flag}</a>
+}
 
 export const Footer = () => {
-    const {getString, setLocale, locale} = useLocalization()
+    const {getString, locale} = useLocalization()
 
     return (
         <div class="container text-center">
@@ -21,8 +38,8 @@ export const Footer = () => {
                 {getString("disclaimer")}
             </span>
             <br/>
-            {locale === "nl" ? <a onClick={() => setLocale("en")}><UkFlag/></a> : <></>}
-            {locale === "en" ? <a onClick={() => setLocale("nl")}><NlFlag/></a> : <></>}
+            {locale === "nl" ? <LocaleFlag locale={"en"}/> : <></>}
+            {locale === "en" ? <LocaleFlag locale={"nl"}/> : <></>}
         </div>
     )
 }
