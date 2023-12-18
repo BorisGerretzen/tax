@@ -1,4 +1,5 @@
 import {IncomeTaxResult} from "../scripts/incomeTax.ts";
+import {useLocalization} from "../localization/localizationContext.tsx";
 
 export type IncomeTaxTableProps = {
     result: IncomeTaxResult
@@ -22,13 +23,15 @@ const Row = ({label, value}: { label: string, value: number }) => {
 }
 
 export const IncomeTaxTable = ({result}: IncomeTaxTableProps) => {
+    const {getString} = useLocalization()
+
     return (
         <div class="row">
             <div className="col-12">
-                <Row label={"Gross yearly income"} value={result.totalGrossIncome}/>
-                <Row label={"Net yearly income"} value={result.totalNetIncome}/>
-                <Row label={"Net monthly income"} value={result.netMonthlyIncome}/>
-                <Row label={"Net holiday allowance"} value={result.netHolidayAllowance}/>
+                <Row label={getString("grossYearlyIncome")} value={result.totalGrossIncome}/>
+                <Row label={getString("netYearlyIncome")} value={result.totalNetIncome}/>
+                <Row label={getString("netMonthlyIncome")} value={result.netMonthlyIncome}/>
+                <Row label={getString("holidayAllowance")} value={result.netHolidayAllowance}/>
             </div>
         </div>
     )

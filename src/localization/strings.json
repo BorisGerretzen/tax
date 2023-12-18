@@ -1,0 +1,42 @@
+{
+  "holidayAllowance": {
+    "nl": "Vakantiegeld",
+    "en": "Holiday allowance"
+  },
+  "bonus": {
+    "nl": "Bonus of 13e maand",
+    "en": "Bonus or 13th month"
+  },
+  "year": {
+    "nl": "Jaar",
+    "en": "Year"
+  },
+  "disclaimer": {
+    "nl": "Deze berekening is geen vervanging van een belastingadviseur, accountant of andere specialist.\nWij aanvaarden geen aansprakelijkheid voor de gevolgen van het gebruik van de berekeningen en/of informatie.",
+    "en": "This calculation is not a substitute for a tax advisor, accountant or other specialist.\nWe accept no liability for the consequences of the use of the calculations and/or information."
+  },
+  "calculateIncomeTax": {
+    "nl": "Bereken inkomstenbelasting",
+    "en": "Calculate income tax"
+  },
+  "thisFieldIsRequired": {
+    "nl": "Dit veld is verplicht",
+    "en": "This field is required"
+  },
+  "grossYearlyIncome": {
+    "nl": "Bruto jaarinkomen",
+    "en": "Gross yearly income"
+  },
+  "grossMonthlyIncome": {
+    "nl": "Bruto maandinkomen",
+    "en": "Gross monthly income"
+  },
+  "netYearlyIncome": {
+    "nl": "Netto jaarinkomen",
+    "en": "Net yearly income"
+  },
+  "netMonthlyIncome": {
+    "nl": "Netto maandinkomen",
+    "en": "Net monthly income"
+  }
+}
