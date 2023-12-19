@@ -69,7 +69,8 @@ export const IncomeTaxTable = ({input, result}: IncomeTaxTableProps) => {
                 />
                 <Row label={getString("taxPercentage")}
                      value={100 - result.netYearlyIncome / result.grossYearlyIncome * 100}
-                     formatter={amount => amount.toFixed(2) + "%"}/>
+                     formatter={amount => amount.toFixed(2) + "%"}
+                />
             </div>
         </div>
     )
