@@ -17,6 +17,13 @@ export type IncomeTaxResult = {
     netHolidayAllowance: number
 }
 
+type IncomeTaxIntermediate = {
+    totalGrossIncome: number,
+    totalNetIncome: number,
+    exemptions: { [name: string]: number }
+    taxedPerBracket: number[]
+}
+
 export type TaxBracket = {
     to?: number
     percentage: number
@@ -38,8 +45,8 @@ export type TaxExemptionScale = {
 export type TaxEnvironment = {
     taxBrackets: TaxBracket[]
     taxExemptions: TaxExemption[],
-    specialExemptions: TaxBracket[]
 }
+
 
 const taxEnvironments: { [year: number]: TaxEnvironment } = {
     2023: {
@@ -97,36 +104,6 @@ const taxEnvironments: { [year: number]: TaxEnvironment } = {
                         incomeReduction: 22661
                     }
                 ]
-            }
-        ],
-        specialExemptions: [
-            {
-                to: 10698,
-                percentage: 0
-            },
-            {
-                to: 11600,
-                percentage: -8.23
-            },
-            {
-                to: 21483,
-                percentage: -29.86
-            },
-            {
-                to: 37150,
-                percentage: -3.09
-            },
-            {
-                to: 53123,
-                percentage: 3.01
-            },
-            {
-                to: 73032,
-                percentage: 12.61
-            },
-            {
-                to: 124520,
-                percentage: 6.51
             }
         ]
     }
@@ -196,43 +173,35 @@ const calculateExemptions = (
     return exemptionResults
 }
 
-const calculateHolidayAllowance = (basicWage: number, holidayAllowancePercentage: number, taxEnvironment: TaxEnvironment): {
-    gross: number,
-    net: number
-} => {
-    const holidayAllowanceFraction = holidayAllowancePercentage / 100
-    const grossHolidayAllowance = basicWage * holidayAllowanceFraction
-    const grossWage = basicWage + grossHolidayAllowance
+const calculateWithoutBonus = (
+    params: IncomeTaxCalculationParameters,
+    taxEnvironment: TaxEnvironment
+): IncomeTaxIntermediate => {
+    const basicWage = params.incomePerMonth * 12
+    const {taxBrackets, taxExemptions} = taxEnvironment
 
-    const baseTariff = taxEnvironment.taxBrackets.find(bracket => (bracket.to || 1e100) > grossWage)?.percentage
-    if (!baseTariff) {
-        throw new Error("This should not happen, no base tariff found")
-    }
+    // Calculate taxes
+    const taxPerBracket = calculateTaxPerBracket(basicWage, taxBrackets)
+    const totalTax = taxPerBracket.reduce((total, bracket) => total + bracket, 0)
 
-    const tariffModifier = taxEnvironment.specialExemptions.find(bracket => (bracket.to || 1e100) > grossWage)?.percentage
-    if (!tariffModifier) {
-        throw new Error("This should not happen, no adapted tariff found")
-    }
-
-    const modifiedTariff = baseTariff + tariffModifier
-    const netHolidayAllowance = grossHolidayAllowance * (1 - modifiedTariff / 100)
+    // Calculate exemptions
+    const exemptionResults = calculateExemptions(basicWage, taxExemptions, totalTax)
+    const totalExemptions = Object.values(exemptionResults).reduce((total, exemption) => total + exemption, 0)
 
     return {
-        gross: grossHolidayAllowance,
-        net: netHolidayAllowance
+        totalGrossIncome: Math.ceil(basicWage),
+        totalNetIncome: Math.ceil(basicWage - totalTax + totalExemptions),
+        taxedPerBracket: taxPerBracket.map(tax => Math.floor(tax)),
+        exemptions: exemptionResults
     }
 }
 
-export const calculateIncomeTax = (
+const calculateWithBonus = (
     params: IncomeTaxCalculationParameters,
-    taxEnvironment?: TaxEnvironment
-): IncomeTaxResult => {
-    taxEnvironment = taxEnvironment || taxEnvironments[params.year]
-    const holidayAllowanceFraction = params.holidayAllowancePercentage / 100
-
+    taxEnvironment: TaxEnvironment
+): IncomeTaxIntermediate => {
     const basicWage = params.incomePerMonth * 12
-    const grossIncome = basicWage * (1 + holidayAllowanceFraction) + (params.bonus || 0)
-
+    const grossIncome = basicWage + (params.bonus || 0) + (basicWage * params.holidayAllowancePercentage / 100)
     const {taxBrackets, taxExemptions} = taxEnvironment
 
     // Calculate taxes
@@ -243,22 +212,36 @@ export const calculateIncomeTax = (
     const exemptionResults = calculateExemptions(grossIncome, taxExemptions, totalTax)
     const totalExemptions = Object.values(exemptionResults).reduce((total, exemption) => total + exemption, 0)
 
-    // Calculate holiday allowance using special tariffs
-    const holidayAllowance = calculateHolidayAllowance(basicWage, params.holidayAllowancePercentage, taxEnvironment)
+    return {
+        totalGrossIncome: Math.ceil(grossIncome),
+        totalNetIncome: Math.ceil(grossIncome - totalTax + totalExemptions),
+        taxedPerBracket: taxPerBracket.map(tax => Math.floor(tax)),
+        exemptions: exemptionResults
+    }
+}
 
-    // Calculate net income
-    const netYearlyIncome = grossIncome - totalTax + totalExemptions
-    const netMonthlyIncome = (netYearlyIncome - holidayAllowance.net) / 12
+export const calculateIncomeTax = (
+    params: IncomeTaxCalculationParameters,
+    taxEnvironment?: TaxEnvironment
+): IncomeTaxResult => {
+    taxEnvironment = taxEnvironment || taxEnvironments[params.year]
+
+    const withBonus = calculateWithBonus(params, taxEnvironment)
+    const withoutBonus = calculateWithoutBonus(params, taxEnvironment)
+
+    const grossHolidayAllowance = params.incomePerMonth * 12 * params.holidayAllowancePercentage / 100
+    const netHolidayAllowance = withBonus.totalNetIncome - withoutBonus.totalNetIncome
+    const netMonthlyIncome = (withBonus.totalNetIncome - netHolidayAllowance)/12
 
     return {
         year: params.year,
-        totalGrossIncome: Math.ceil(grossIncome),
-        grossHolidayAllowance: Math.ceil(holidayAllowance.gross),
-        taxedPerBracket: taxPerBracket.map(tax => Math.floor(tax)),
-        totalTaxed: Math.floor(totalTax),
-        exemptions: exemptionResults,
-        totalNetIncome: Math.ceil(netYearlyIncome),
+        totalGrossIncome: Math.ceil(withBonus.totalGrossIncome),
+        grossHolidayAllowance: Math.ceil(grossHolidayAllowance),
+        taxedPerBracket: withBonus.taxedPerBracket,
+        totalTaxed: Math.floor(withBonus.taxedPerBracket.reduce((total, bracket) => total + bracket, 0)),
+        exemptions: withBonus.exemptions,
+        totalNetIncome: Math.ceil(withBonus.totalNetIncome),
         netMonthlyIncome: Math.ceil(netMonthlyIncome),
-        netHolidayAllowance: Math.ceil(holidayAllowance.net)
+        netHolidayAllowance: Math.ceil(netHolidayAllowance)
     }
 }
