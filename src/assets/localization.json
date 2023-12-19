@@ -23,20 +23,28 @@
     "nl": "Dit veld is verplicht",
     "en": "This field is required"
   },
-  "grossYearlyIncome": {
-    "nl": "Bruto jaarinkomen",
-    "en": "Gross yearly income"
-  },
   "grossMonthlyIncome": {
     "nl": "Bruto maandinkomen",
     "en": "Gross monthly income"
   },
-  "netYearlyIncome": {
-    "nl": "Netto jaarinkomen",
-    "en": "Net yearly income"
+  "gross": {
+    "nl": "Bruto",
+    "en": "Gross"
   },
-  "netMonthlyIncome": {
-    "nl": "Netto maandinkomen",
-    "en": "Net monthly income"
+  "net": {
+    "nl": "Netto",
+    "en": "Net"
+  },
+  "yearlyIncome": {
+    "nl": "Jaarinkomen",
+    "en": "Yearly income"
+  },
+  "monthlyIncome": {
+    "nl": "Maandinkomen",
+    "en": "Monthly income"
+  },
+  "holidayAllowanceAndBonus": {
+    "nl": "Vakantiegeld en bonus",
+    "en": "Holiday allowance and bonus"
   }
 }

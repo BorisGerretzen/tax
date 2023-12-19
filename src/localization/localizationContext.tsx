@@ -17,7 +17,7 @@ interface LocalizationProviderProps {
 }
 
 export const LocalizationProvider: React.FC<LocalizationProviderProps> = ({children}) => {
-    const [locale, setLocale] = useState<Locale>('en');
+    const [locale, setLocale] = useState<Locale>('nl');
 
     const getString = (key: LocalizationKey): string => {
         return strings[key][locale];

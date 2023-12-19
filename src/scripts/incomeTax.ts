@@ -3,14 +3,17 @@ import {TaxBracket, TaxEnvironment, taxEnvironments, TaxExemption} from "./taxEn
 
 export type IncomeTaxResult = {
     year: number
-    totalGrossIncome: number
-    grossHolidayAllowance: number
+
+    grossYearlyIncome: number
+    grossHolidayAllowanceAndBonus: number
+
+    netYearlyIncome: number
+    netMonthlyIncome: number
+    netHolidayAllowanceAndBonus: number
+
     taxedPerBracket: number[]
     exemptions: ExemptionResult[]
     totalTaxed: number
-    totalNetIncome: number
-    netMonthlyIncome: number
-    netHolidayAllowance: number
 }
 
 export type IncomeTaxCalculationParameters = {
@@ -136,27 +139,27 @@ export const calculateIncomeTax = (
     const holidayAllowancePercentage = params.holidayAllowancePercentage / 100
 
     const basicWage = params.incomePerMonth * 12
-    const grossIncome = basicWage + (params.bonus || 0) + (basicWage * holidayAllowancePercentage)
+    const grossHolidayAllowanceAndBonus = basicWage * holidayAllowancePercentage + (params.bonus || 0)
+    const grossIncome = basicWage + grossHolidayAllowanceAndBonus
 
     const withBonus = calculate(grossIncome, taxEnvironment)
     const withoutBonus = calculate(basicWage, taxEnvironment)
 
-    const grossHolidayAllowance = params.incomePerMonth * 12 * holidayAllowancePercentage
     const netHolidayAllowance = withBonus.totalNetIncome - withoutBonus.totalNetIncome
     const netMonthlyIncome = (withBonus.totalNetIncome - netHolidayAllowance) / 12
 
     return {
         year: params.year,
-        totalGrossIncome: roundUp(withBonus.totalGrossIncome),
-        grossHolidayAllowance: roundUp(grossHolidayAllowance),
+        grossYearlyIncome: roundUp(withBonus.totalGrossIncome),
+        grossHolidayAllowanceAndBonus: roundUp(grossHolidayAllowanceAndBonus),
         taxedPerBracket: withBonus.taxedPerBracket.map(tax => roundDown(tax)),
         totalTaxed: roundDown(sum(withBonus.taxedPerBracket)),
         exemptions: withBonus.exemptions.map(exemption => ({
             name: exemption.name,
             amount: roundDown(exemption.amount)
         })),
-        totalNetIncome: roundUp(withBonus.totalNetIncome),
+        netYearlyIncome: roundUp(withBonus.totalNetIncome),
         netMonthlyIncome: roundUp(netMonthlyIncome),
-        netHolidayAllowance: roundUp(netHolidayAllowance)
+        netHolidayAllowanceAndBonus: roundUp(netHolidayAllowance)
     }
 }

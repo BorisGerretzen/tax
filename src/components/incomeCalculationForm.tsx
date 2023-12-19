@@ -66,7 +66,7 @@ export const IncomeCalculationForm = (props: IncomeTaxCalculationProps) => {
                     </div>
                     <div>
                         <label for="holidayAllowancePercentage"
-                               class="form-label">{getString("holidayAllowance")}</label>
+                               class="form-label">{getString("holidayAllowance")} (%)</label>
                         <input
                             class={"form-control " + (errors.holidayAllowancePercentage ? " is-invalid" : "is-valid")}
                             type={"number"}
