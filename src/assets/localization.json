@@ -46,5 +46,9 @@
   "holidayAllowanceAndBonus": {
     "nl": "Vakantiegeld en bonus",
     "en": "Holiday allowance and bonus"
+  },
+  "taxPercentage": {
+    "nl": "Belastingpercentage",
+    "en": "Tax percentage"
   }
 }
