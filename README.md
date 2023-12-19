@@ -9,6 +9,6 @@ only a basic version is available.
 - [ ] Account for age
 - [ ] Account for car
 - [ ] Toeslagen
-- [ ] Bonus is not correctly calculated
+- [x] Bonus is not correctly calculated
 - [ ] Tests
 - [ ] Something you're missing? Let me know! You can open an issue or send an email to the address on my profile page.
