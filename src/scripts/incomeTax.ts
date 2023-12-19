@@ -1,3 +1,18 @@
+import {roundDown, roundUp, sum} from "./helpers.ts";
+import {TaxBracket, TaxEnvironment, taxEnvironments, TaxExemption} from "./taxEnvironment.ts"
+
+export type IncomeTaxResult = {
+    year: number
+    totalGrossIncome: number
+    grossHolidayAllowance: number
+    taxedPerBracket: number[]
+    exemptions: ExemptionResult[]
+    totalTaxed: number
+    totalNetIncome: number
+    netMonthlyIncome: number
+    netHolidayAllowance: number
+}
+
 export type IncomeTaxCalculationParameters = {
     year: number,
     incomePerMonth: number
@@ -5,108 +20,16 @@ export type IncomeTaxCalculationParameters = {
     bonus?: number
 }
 
-export type IncomeTaxResult = {
-    year: number
-    totalGrossIncome: number
-    grossHolidayAllowance: number
-    taxedPerBracket: number[]
-    exemptions: { [name: string]: number }
-    totalTaxed: number
-    totalNetIncome: number
-    netMonthlyIncome: number
-    netHolidayAllowance: number
+type ExemptionResult = {
+    name: string
+    amount: number
 }
 
 type IncomeTaxIntermediate = {
     totalGrossIncome: number,
     totalNetIncome: number,
-    exemptions: { [name: string]: number }
+    exemptions: ExemptionResult[],
     taxedPerBracket: number[]
-}
-
-export type TaxBracket = {
-    to?: number
-    percentage: number
-}
-
-export type TaxExemption = {
-    name: string
-    scales: TaxExemptionScale[]
-    reduceOnOverflow?: boolean
-}
-
-export type TaxExemptionScale = {
-    to?: number,
-    baseAmount: number,
-    percentage: number,
-    incomeReduction?: number
-}
-
-export type TaxEnvironment = {
-    taxBrackets: TaxBracket[]
-    taxExemptions: TaxExemption[],
-}
-
-
-const taxEnvironments: { [year: number]: TaxEnvironment } = {
-    2023: {
-        taxBrackets: [
-            {
-                to: 73032,
-                percentage: 36.93
-            },
-            {
-                percentage: 49.5
-            }
-        ],
-        taxExemptions: [
-            {
-                name: "Arbeidskorting",
-                scales: [
-                    {
-                        to: 10741,
-                        baseAmount: 0,
-                        percentage: 8.231
-                    },
-                    {
-                        to: 23201,
-                        baseAmount: 884,
-                        percentage: 29.861,
-                        incomeReduction: 10741,
-                    },
-                    {
-                        to: 37691,
-                        baseAmount: 4605,
-                        percentage: 3.085,
-                        incomeReduction: 23201,
-                    },
-                    {
-                        to: 115295,
-                        baseAmount: 5052,
-                        percentage: -6.51,
-                        incomeReduction: 37691,
-                    }
-                ]
-            },
-            {
-                name: "Algemene heffingskorting",
-                reduceOnOverflow: true,
-                scales: [
-                    {
-                        to: 22661,
-                        percentage: 0,
-                        baseAmount: 3070
-                    },
-                    {
-                        to: 73031,
-                        baseAmount: 3070,
-                        percentage: -6.095,
-                        incomeReduction: 22661
-                    }
-                ]
-            }
-        ]
-    }
 }
 
 /**
@@ -141,8 +64,8 @@ const calculateTaxPerBracket = (grossIncome: number, taxBrackets: TaxBracket[]):
 const calculateExemptions = (
     grossIncome: number,
     taxExemptions: TaxExemption[], totalTax: number
-): { [name: string]: number } => {
-    const exemptionResults: { [name: string]: number } = {}
+): ExemptionResult[] => {
+    const exemptionResults: ExemptionResult[] = []
     let totalExempted = 0
 
     // Sort exemptions by reduceOnOverflow, so we can apply them in the correct order
@@ -152,7 +75,7 @@ const calculateExemptions = (
 
         // If we overflow the scale, we don't get any exemption
         if (!exemptionScale) {
-            exemptionResults[exemption.name] = 0
+            exemptionResults.push({name: exemption.name, amount: 0})
             continue
         }
 
@@ -162,86 +85,78 @@ const calculateExemptions = (
 
         // If we get more discount than we have to pay, we don't get any more discount
         if (exemption.reduceOnOverflow && (totalExempted + result) > totalTax) {
-            exemptionResults[exemption.name] = totalTax - totalExempted
+            exemptionResults.push({name: exemption.name, amount: totalTax - totalExempted})
             continue
         }
 
-        exemptionResults[exemption.name] = result
+        exemptionResults.push({name: exemption.name, amount: result})
         totalExempted += result
     }
 
     return exemptionResults
 }
 
-const calculateWithoutBonus = (
-    params: IncomeTaxCalculationParameters,
+/**
+ * Calculates the income tax for a given gross income
+ * @param gross The gross income
+ * @param taxEnvironment The tax environment to calculate the tax in
+ */
+const calculate = (
+    gross: number,
     taxEnvironment: TaxEnvironment
 ): IncomeTaxIntermediate => {
-    const basicWage = params.incomePerMonth * 12
     const {taxBrackets, taxExemptions} = taxEnvironment
 
     // Calculate taxes
-    const taxPerBracket = calculateTaxPerBracket(basicWage, taxBrackets)
+    const taxPerBracket = calculateTaxPerBracket(gross, taxBrackets)
     const totalTax = taxPerBracket.reduce((total, bracket) => total + bracket, 0)
 
     // Calculate exemptions
-    const exemptionResults = calculateExemptions(basicWage, taxExemptions, totalTax)
-    const totalExemptions = Object.values(exemptionResults).reduce((total, exemption) => total + exemption, 0)
+    const exemptionResults = calculateExemptions(gross, taxExemptions, totalTax)
+    const totalExemptions = sum(exemptionResults.map(exemption => exemption.amount))
 
     return {
-        totalGrossIncome: Math.ceil(basicWage),
-        totalNetIncome: Math.ceil(basicWage - totalTax + totalExemptions),
-        taxedPerBracket: taxPerBracket.map(tax => Math.floor(tax)),
+        totalGrossIncome: gross,
+        totalNetIncome: gross - totalTax + totalExemptions,
+        taxedPerBracket: taxPerBracket,
         exemptions: exemptionResults
     }
 }
 
-const calculateWithBonus = (
-    params: IncomeTaxCalculationParameters,
-    taxEnvironment: TaxEnvironment
-): IncomeTaxIntermediate => {
-    const basicWage = params.incomePerMonth * 12
-    const grossIncome = basicWage + (params.bonus || 0) + (basicWage * params.holidayAllowancePercentage / 100)
-    const {taxBrackets, taxExemptions} = taxEnvironment
-
-    // Calculate taxes
-    const taxPerBracket = calculateTaxPerBracket(grossIncome, taxBrackets)
-    const totalTax = taxPerBracket.reduce((total, bracket) => total + bracket, 0)
-
-    // Calculate exemptions
-    const exemptionResults = calculateExemptions(grossIncome, taxExemptions, totalTax)
-    const totalExemptions = Object.values(exemptionResults).reduce((total, exemption) => total + exemption, 0)
-
-    return {
-        totalGrossIncome: Math.ceil(grossIncome),
-        totalNetIncome: Math.ceil(grossIncome - totalTax + totalExemptions),
-        taxedPerBracket: taxPerBracket.map(tax => Math.floor(tax)),
-        exemptions: exemptionResults
-    }
-}
-
+/**
+ * Calculates the income tax for a given gross income
+ * @param params The parameters to calculate the tax for
+ * @param taxEnvironment (optional) The tax environment to calculate the tax in, defaults to the tax environment for the given year
+ */
 export const calculateIncomeTax = (
     params: IncomeTaxCalculationParameters,
     taxEnvironment?: TaxEnvironment
 ): IncomeTaxResult => {
     taxEnvironment = taxEnvironment || taxEnvironments[params.year]
+    const holidayAllowancePercentage = params.holidayAllowancePercentage / 100
 
-    const withBonus = calculateWithBonus(params, taxEnvironment)
-    const withoutBonus = calculateWithoutBonus(params, taxEnvironment)
+    const basicWage = params.incomePerMonth * 12
+    const grossIncome = basicWage + (params.bonus || 0) + (basicWage * holidayAllowancePercentage)
 
-    const grossHolidayAllowance = params.incomePerMonth * 12 * params.holidayAllowancePercentage / 100
+    const withBonus = calculate(grossIncome, taxEnvironment)
+    const withoutBonus = calculate(basicWage, taxEnvironment)
+
+    const grossHolidayAllowance = params.incomePerMonth * 12 * holidayAllowancePercentage
     const netHolidayAllowance = withBonus.totalNetIncome - withoutBonus.totalNetIncome
-    const netMonthlyIncome = (withBonus.totalNetIncome - netHolidayAllowance)/12
+    const netMonthlyIncome = (withBonus.totalNetIncome - netHolidayAllowance) / 12
 
     return {
         year: params.year,
-        totalGrossIncome: Math.ceil(withBonus.totalGrossIncome),
-        grossHolidayAllowance: Math.ceil(grossHolidayAllowance),
-        taxedPerBracket: withBonus.taxedPerBracket,
-        totalTaxed: Math.floor(withBonus.taxedPerBracket.reduce((total, bracket) => total + bracket, 0)),
-        exemptions: withBonus.exemptions,
-        totalNetIncome: Math.ceil(withBonus.totalNetIncome),
-        netMonthlyIncome: Math.ceil(netMonthlyIncome),
-        netHolidayAllowance: Math.ceil(netHolidayAllowance)
+        totalGrossIncome: roundUp(withBonus.totalGrossIncome),
+        grossHolidayAllowance: roundUp(grossHolidayAllowance),
+        taxedPerBracket: withBonus.taxedPerBracket.map(tax => roundDown(tax)),
+        totalTaxed: roundDown(sum(withBonus.taxedPerBracket)),
+        exemptions: withBonus.exemptions.map(exemption => ({
+            name: exemption.name,
+            amount: roundDown(exemption.amount)
+        })),
+        totalNetIncome: roundUp(withBonus.totalNetIncome),
+        netMonthlyIncome: roundUp(netMonthlyIncome),
+        netHolidayAllowance: roundUp(netHolidayAllowance)
     }
 }

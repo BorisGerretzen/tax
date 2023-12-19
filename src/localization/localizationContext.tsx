@@ -1,5 +1,5 @@
 import React, {createContext, ReactNode, useContext, useState} from 'react';
-import strings from './strings.json';
+import strings from '../assets/localization.json';
 
 export type Locale = 'en' | 'nl';
 export type LocalizationKey = keyof typeof strings;

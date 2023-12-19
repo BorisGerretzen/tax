@@ -17,7 +17,7 @@ export const Content = () => {
                     <IncomeCalculationForm
                         onParametersChange={calculation => {
                             const incomeTaxResult = calculateIncomeTax(calculation)
-                            // console.log(incomeTaxResult)
+                            console.log(incomeTaxResult)
                             setIncomeTaxResult(incomeTaxResult)
                         }}/>
 
