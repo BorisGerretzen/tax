@@ -1,4 +1,4 @@
-import {useForm} from "react-hook-form";
+import {FieldError, useForm} from "react-hook-form";
 import "../assets/incomeCalculationForm.css"
 import {useEffect} from "preact/compat";
 import {IncomeTaxCalculationParameters} from "../scripts/incomeTax.ts";
@@ -10,12 +10,17 @@ export type IncomeTaxCalculationProps = {
     onParametersChange?: (calculation: IncomeTaxCalculationParameters) => void
 }
 
-const InvalidField = () => {
+const InvalidField = ({error}: { error: FieldError }) => {
     const {getString} = useLocalization()
+
+    const message =
+        error.type == "required" ? getString("thisFieldIsRequired") :
+            error.type == "min" ? getString("fieldShouldBePositive") :
+                ""
 
     return (
         <div class="invalid-feedback">
-            {getString("thisFieldIsRequired")}
+            {message}
         </div>
     )
 }
@@ -50,7 +55,7 @@ export const IncomeCalculationForm = (props: IncomeTaxCalculationProps) => {
         return () => subscription.unsubscribe();
     }, [handleSubmit, watch]);
 
-
+    console.log(errors)
     return (
         <>
             <form onSubmit={handleSubmit(onSubmit)}>
@@ -60,9 +65,10 @@ export const IncomeCalculationForm = (props: IncomeTaxCalculationProps) => {
                         <input
                             class={"form-control " + (errors.incomePerMonth ? " is-invalid" : "is-valid")}
                             type={"number"}
-                            {...register("incomePerMonth", {required: true, valueAsNumber: true})}
+                            min={0}
+                            {...register("incomePerMonth", {required: true, valueAsNumber: true, min: 0})}
                         />
-                        {errors.incomePerMonth && <InvalidField/>}
+                        {errors.incomePerMonth && <InvalidField error={errors.incomePerMonth}/>}
                     </div>
                     <div>
                         <label for="holidayAllowancePercentage"
@@ -70,18 +76,20 @@ export const IncomeCalculationForm = (props: IncomeTaxCalculationProps) => {
                         <input
                             class={"form-control " + (errors.holidayAllowancePercentage ? " is-invalid" : "is-valid")}
                             type={"number"}
+                            min={0}
                             {...register("holidayAllowancePercentage", {required: true, valueAsNumber: true})}
                         />
-                        {errors.holidayAllowancePercentage && <InvalidField/>}
+                        {errors.holidayAllowancePercentage && <InvalidField error={errors.holidayAllowancePercentage}/>}
                     </div>
                     <div>
                         <label for="bonus" class="form-label">{getString("bonus")}</label>
                         <input
                             class={"form-control " + (errors.bonus ? " is-invalid" : "is-valid")}
                             type={"number"}
+                            min={0}
                             {...register("bonus", {valueAsNumber: true})}
                         />
-                        {errors.bonus && <InvalidField/>}
+                        {errors.bonus && <InvalidField error={errors.bonus}/>}
                     </div>
                     <div>
                         <label for="year" class="form-label">{getString("year")}</label>
@@ -91,7 +99,7 @@ export const IncomeCalculationForm = (props: IncomeTaxCalculationProps) => {
                         >
                             <option value="2023">2023</option>
                         </select>
-                        {errors.year && <InvalidField/>}
+                        {errors.year && <InvalidField error={errors.year}/>}
                     </div>
                 </div>
             </form>

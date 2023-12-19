@@ -50,5 +50,9 @@
   "taxPercentage": {
     "nl": "Belastingpercentage",
     "en": "Tax percentage"
+  },
+  "fieldShouldBePositive": {
+    "nl": "Dit veld moet een positief getal zijn",
+    "en": "This field should be a positive number"
   }
 }
